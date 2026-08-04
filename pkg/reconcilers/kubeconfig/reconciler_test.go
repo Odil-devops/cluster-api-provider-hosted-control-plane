@@ -164,7 +164,7 @@ func TestKubeconfigReconciler_KubeconfigConnectivity(t *testing.T) {
 				},
 			},
 			endpointType:    "external",
-			expectedServer:  "https://api.test-cluster.example.com:443",
+			expectedServer:  "https://api.test-cluster.example.com",
 			expectedContext: "admin@test-cluster",
 		},
 		{
@@ -176,7 +176,7 @@ func TestKubeconfigReconciler_KubeconfigConnectivity(t *testing.T) {
 				},
 			},
 			endpointType:    "internal",
-			expectedServer:  "https://test-cluster:443",
+			expectedServer:  "https://test-cluster",
 			expectedContext: "kube-controller-manager@test-cluster",
 		},
 		{
@@ -391,7 +391,7 @@ func TestKubeconfigReconciler_MultiUserScenarios(t *testing.T) {
 
 		g.Expect(kubeconfig.Clusters).To(HaveKey(cluster.Name))
 		clusterInfo := kubeconfig.Clusters[cluster.Name]
-		g.Expect(clusterInfo.Server).To(Equal("https://api.example.com:443"))
+		g.Expect(clusterInfo.Server).To(Equal("https://api.example.com"))
 		g.Expect(clusterInfo.CertificateAuthorityData).ToNot(BeEmpty())
 	}
 

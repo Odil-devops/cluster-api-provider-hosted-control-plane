@@ -86,9 +86,18 @@ func (i *infrastructureClusterReconciler) SyncControlPlaneEndpoint(
 				)
 			}
 
+			// thewahda fork: drop the namespace segment from the FQDN pattern.
+			// Upstream produced `<cluster>.<namespace>.<gateway-wildcard-base>`,
+			// which leaks the CAPI namespace name (e.g. `magnum-<projectHex>`)
+			// into every user-facing endpoint. We use `<cluster>.<wildcardBase>`
+			// so the segment right of the cluster is controlled purely by the
+			// Gateway listener hostname — the operator can put an AZ/region
+			// label there (e.g. `*.in-north-az1.k8s.example.com`) without
+			// touching this code. Cluster.Name is already unique across the
+			// fleet because Magnum appends a random suffix.
 			endpoint := capiv2.APIEndpoint{
-				Host: fmt.Sprintf("%s.%s.%s",
-					cluster.Name, cluster.Namespace, strings.TrimPrefix(string(*listener.Hostname), "*."),
+				Host: fmt.Sprintf("%s.%s",
+					cluster.Name, strings.TrimPrefix(string(*listener.Hostname), "*."),
 				),
 				Port: i.apiServerServicePort,
 			}

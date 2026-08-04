@@ -23,6 +23,18 @@ import (
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/tracing"
 )
 
+// formatServerURL builds the `server:` value for a kubeconfig. thewahda fork:
+// upstream always emits `https://<host>:<port>`, which surfaces `:443` (our
+// apiServerServicePort default) in the admin kubeconfig — noisy, since 443 is
+// the HTTPS default. We strip the port when it matches the URL-scheme default
+// (443 for https) so the endpoint reads as a clean hostname.
+func formatServerURL(ep capiv2.APIEndpoint) string {
+	if ep.Port == 443 {
+		return fmt.Sprintf("https://%s", ep.Host)
+	}
+	return fmt.Sprintf("https://%s", ep.String())
+}
+
 type KubeconfigReconciler interface {
 	ReconcileKubeconfigs(
 		ctx context.Context,
@@ -221,7 +233,7 @@ func (kr *kubeconfigReconciler) generateKubeconfigFromSecret(
 			return &api.Config{
 				Clusters: map[string]*api.Cluster{
 					clusterName: {
-						Server:                   fmt.Sprintf("https://%s", apiEndpoint.String()),
+						Server:                   formatServerURL(apiEndpoint),
 						CertificateAuthorityData: caSecret.Data[konstants.CACertName],
 					},
 				},
