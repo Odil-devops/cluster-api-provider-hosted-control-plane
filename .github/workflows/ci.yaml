@@ -22,7 +22,6 @@ jobs:
     name: Test, lint, build and push (if on main)
     runs-on: ubuntu-latest
     env:
-      IMAGE: ghcr.io/${{ github.repository }}:latest
       GITHUB_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
     permissions:
       contents: read
@@ -31,6 +30,14 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0 # needed for finding the current version
+
+      # ghcr.io rejects mixed-case repository names (fork owner "Odil-devops"
+      # otherwise produces "ghcr.io/Odil-devops/..." and buildah errors with
+      # "repository name must be lowercase"). Force-lowercase the whole path.
+      - name: Compute lowercase image tag
+        run: |
+          repo_lower="${GITHUB_REPOSITORY,,}"
+          echo "IMAGE=ghcr.io/${repo_lower}:latest" >> "$GITHUB_ENV"
 
       - uses: actions/setup-go@v6
         with:

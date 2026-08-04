@@ -32,8 +32,8 @@ jobs:
     if: ${{ needs.release-please.outputs.release_created }}
     runs-on: ubuntu-latest
     env:
-      IMAGE: ghcr.io/${{ github.repository }}:${{ needs.release-please.outputs.tag_name }}
       GITHUB_TOKEN: ${{ secrets.ACTIONS_BOT_TOKEN }}
+      TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
     permissions:
       contents: write
       packages: write
@@ -49,6 +49,12 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: ./go.mod
+
+      # ghcr.io requires lowercase repository names — see ci.yaml note.
+      - name: Compute lowercase image tag
+        run: |
+          repo_lower="${GITHUB_REPOSITORY,,}"
+          echo "IMAGE=ghcr.io/${repo_lower}:${TAG_NAME}" >> "$GITHUB_ENV"
 
       - name: Download last metadata
         run: |
