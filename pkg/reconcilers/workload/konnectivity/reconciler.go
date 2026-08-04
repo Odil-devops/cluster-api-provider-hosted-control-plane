@@ -15,7 +15,6 @@ import (
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/operator/util/names"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/reconcilers"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/reconcilers/alias"
-	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/networkpolicy"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/tracing"
 	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -303,17 +302,13 @@ func (kr *konnectivityReconciler) reconcileKonnectivityDeployment(
 					},
 				},
 				names.GetControlPlaneLabels(cluster, "konnectivity"),
-				map[int32][]networkpolicy.IngressNetworkPolicyTarget{},
-				map[int32][]networkpolicy.EgressNetworkPolicyTarget{
-					0: { // needs to proxy to any port in the whole cluster
-						networkpolicy.NewClusterNetworkPolicyTarget(),
-					},
-					kr.konnectivityServicePort: {
-						networkpolicy.NewDNSNetworkPolicyTarget(
-							names.GetKonnectivityServerHost(cluster),
-						),
-					},
-				},
+				// thewahda fork: drop workload-cluster kube-system NP for
+				// konnectivity-agent. See coredns/reconciler.go for the full
+				// rationale (broken UDP:53, 0.0.0.0/0 egress no-op, industry
+				// clean-tenant convention). Passing nil,nil deletes any pre-
+				// existing NP without recreating it.
+				nil,
+				nil,
 				[]slices.Tuple2[*corev1ac.ContainerApplyConfiguration, reconcilers.ContainerOptions]{
 					slices.T2(container, reconcilers.ContainerOptions{
 						NeedsServiceAccount: true,

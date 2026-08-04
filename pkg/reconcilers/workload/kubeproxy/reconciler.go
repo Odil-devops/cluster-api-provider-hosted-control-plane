@@ -14,7 +14,6 @@ import (
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/reconcilers"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/reconcilers/alias"
 	errorsUtil "github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/errors"
-	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/networkpolicy"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/tracing"
 	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -388,15 +387,13 @@ func (kr *kubeProxyReconciler) reconcileKubeProxyDaemonSet(
 					},
 				},
 				kr.kubeProxyLabels,
-				map[int32][]networkpolicy.IngressNetworkPolicyTarget{},
-				map[int32][]networkpolicy.EgressNetworkPolicyTarget{
-					0: { // needs to proxy to any port in the whole cluster
-						networkpolicy.NewClusterNetworkPolicyTarget(),
-					},
-					6443: {
-						networkpolicy.NewAPIServerNetworkPolicyTarget(hostedControlPlane),
-					},
-				},
+				// thewahda fork: drop kube-system NP for kube-proxy. The pod
+				// runs with hostNetwork=true — Kubernetes NetworkPolicy does
+				// not apply to host-network pods at all, so this policy has
+				// been a no-op on the k8s NP path from day one. See coredns
+				// reconciler.go for the full rationale.
+				nil,
+				nil,
 				[]slices.Tuple2[*corev1ac.ContainerApplyConfiguration, reconcilers.ContainerOptions]{
 					slices.T2(container, reconcilers.ContainerOptions{
 						Root:                    true,

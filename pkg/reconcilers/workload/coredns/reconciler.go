@@ -15,7 +15,6 @@ import (
 	operatorutil "github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/operator/util"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/reconcilers"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/reconcilers/alias"
-	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/networkpolicy"
 	"github.com/teutonet/cluster-api-provider-hosted-control-plane/pkg/util/tracing"
 	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
@@ -381,19 +380,25 @@ func (cr *coreDNSReconciler) reconcileCoreDNSDeployment(
 					},
 				},
 				cr.coreDNSLabels,
-				map[int32][]networkpolicy.IngressNetworkPolicyTarget{
-					cr.coreDNSPort: {
-						networkpolicy.NewNamespaceLabelNetworkPolicyTarget(map[string]string{}),
-					},
-				},
-				map[int32][]networkpolicy.EgressNetworkPolicyTarget{
-					53: {
-						networkpolicy.NewWorldNetworkPolicyTarget(),
-					},
-					6443: {
-						networkpolicy.NewAPIServerNetworkPolicyTarget(hostedControlPlane),
-					},
-				},
+				// thewahda fork: do not attach kube-system NetworkPolicies to
+				// workload-cluster CoreDNS. Passing nil,nil signals the shared
+				// reconciler to *delete* any existing policy (see reconciler.go
+				// deleteResource branch). Rationale:
+				//   1) Upstream's k8s-native NP path was broken — the ingress
+				//      rule only opened TCP:53 (missing WithProtocol call in
+				//      reconciler.go), silently dropping every UDP DNS query
+				//      and stalling konnectivity-agent forever on DNS resolve.
+				//   2) The egress rules resolved to WorldNetworkPolicyTarget /
+				//      APIServerNetworkPolicyTarget which under k8s NP degrade
+				//      to 0.0.0.0/0 — no real restriction, just cargo cult.
+				//   3) EKS/GKE/AKS/DOKS/HyperShift ship NO NetworkPolicies in
+				//      tenant kube-system. Managed offerings expect a clean
+				//      tenant namespace; enforcement is the tenant's job.
+				// Operators who want kube-system NPs should apply them
+				// out-of-band (they'll be additive) — the provider must not
+				// impose them by default.
+				nil,
+				nil,
 				[]slices.Tuple2[*corev1ac.ContainerApplyConfiguration, reconcilers.ContainerOptions]{
 					slices.T2(container, reconcilers.ContainerOptions{
 						Capabilities:        []corev1.Capability{"NET_BIND_SERVICE"},
