@@ -127,7 +127,7 @@ func TestKubeconfigReconciler_ReconcileWorkflow(t *testing.T) {
 				)
 				g.Expect(err).NotTo(HaveOccurred())
 
-				expectedServer := fmt.Sprintf("https://%s", tt.cluster.Spec.ControlPlaneEndpoint.String())
+				expectedServer := formatServerURL(tt.cluster.Spec.ControlPlaneEndpoint)
 				g.Expect(kubeconfig.Clusters[tt.cluster.Name].Server).To(Equal(expectedServer))
 				g.Expect(kubeconfig.Clusters[tt.cluster.Name].CertificateAuthorityData).ToNot(BeEmpty())
 				g.Expect(kubeconfig.AuthInfos["admin"].ClientCertificateData).ToNot(BeEmpty())

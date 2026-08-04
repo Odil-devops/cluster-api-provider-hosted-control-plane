@@ -487,11 +487,11 @@ func TestHostedControlPlane_FullLifecycle(t *testing.T) {
 				g.Expect(err).To(Succeed())
 				g.Expect(found).To(BeTrue())
 				g.Expect(endpoint).To(And(
-					HaveKeyWithValue("host", "test-cluster.default.example.com"),
+					HaveKeyWithValue("host", "test-cluster.example.com"),
 					HaveKeyWithValue("port", int64(443)),
 				))
 				cluster.Spec.ControlPlaneEndpoint = capiv2.APIEndpoint{
-					Host: "test-cluster.default.example.com",
+					Host: "test-cluster.example.com",
 					Port: 443,
 				}
 				g.Expect(k8sClient.Update(ctx, cluster)).To(Succeed())
