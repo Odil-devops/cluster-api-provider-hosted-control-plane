@@ -346,9 +346,19 @@ func reconcileNetworkPolicy(
 					return fmt.Errorf("failed to delete network policy %s/%s: %w", namespace, name, err)
 				}
 				if deleteResource {
-					if err := ciliumNetworkPolicyInterface.Delete(ctx, name, metav1.DeleteOptions{}); err != nil &&
-						!apierrors.IsNotFound(err) {
-						return fmt.Errorf("failed to delete cilium network policy %s/%s: %w", namespace, name, err)
+					// thewahda fork: guard against nil ciliumNetworkPolicyInterface.
+					// Upstream initialises this only inside `if ciliumClient != nil`
+					// above, but the delete branch runs whenever deleteResource is
+					// true — including when ciliumClient is nil (pure k8s NP path).
+					// The unguarded Delete then dereferences a nil interface and
+					// panics. Only reachable when a caller passes (nil, nil) policy
+					// targets, which upstream never does — but we do (to opt out of
+					// kube-system NPs entirely), so we hit it.
+					if ciliumClient != nil {
+						if err := ciliumNetworkPolicyInterface.Delete(ctx, name, metav1.DeleteOptions{}); err != nil &&
+							!apierrors.IsNotFound(err) {
+							return fmt.Errorf("failed to delete cilium network policy %s/%s: %w", namespace, name, err)
+						}
 					}
 					return nil
 				}
