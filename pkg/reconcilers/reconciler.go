@@ -340,31 +340,32 @@ func reconcileNetworkPolicy(
 				ciliumNetworkPolicyInterface = ciliumClient.CiliumV2().CiliumNetworkPolicies(namespace)
 			}
 
-			if deleteResource || ciliumClient != nil {
+			// thewahda fork: flattened delete logic + guard nil ciliumNetworkPolicyInterface.
+			// Upstream's delete branch dereferenced ciliumNetworkPolicyInterface without a
+			// nil check — panicked on the pure k8s NP path (ciliumClient=nil) when
+			// deleteResource=true. That path is only reachable when a caller passes
+			// (nil, nil) policy targets, which upstream never did but we do (to opt out
+			// of kube-system NPs entirely). Same logic as upstream, just guarded and
+			// flattened to satisfy nestif linter.
+			if deleteResource {
 				if err := networkPolicyInterface.Delete(ctx, name, metav1.DeleteOptions{}); err != nil &&
 					!apierrors.IsNotFound(err) {
 					return fmt.Errorf("failed to delete network policy %s/%s: %w", namespace, name, err)
 				}
-				if deleteResource {
-					// thewahda fork: guard against nil ciliumNetworkPolicyInterface.
-					// Upstream initialises this only inside `if ciliumClient != nil`
-					// above, but the delete branch runs whenever deleteResource is
-					// true — including when ciliumClient is nil (pure k8s NP path).
-					// The unguarded Delete then dereferences a nil interface and
-					// panics. Only reachable when a caller passes (nil, nil) policy
-					// targets, which upstream never does — but we do (to opt out of
-					// kube-system NPs entirely), so we hit it.
-					if ciliumClient != nil {
-						if err := ciliumNetworkPolicyInterface.Delete(ctx, name, metav1.DeleteOptions{}); err != nil &&
-							!apierrors.IsNotFound(err) {
-							return fmt.Errorf("failed to delete cilium network policy %s/%s: %w", namespace, name, err)
-						}
+				if ciliumClient != nil {
+					if err := ciliumNetworkPolicyInterface.Delete(ctx, name, metav1.DeleteOptions{}); err != nil &&
+						!apierrors.IsNotFound(err) {
+						return fmt.Errorf("failed to delete cilium network policy %s/%s: %w", namespace, name, err)
 					}
-					return nil
 				}
+				return nil
 			}
-
 			if ciliumClient != nil {
+				// Migrating from k8s NP to Cilium NP — remove the stale k8s one.
+				if err := networkPolicyInterface.Delete(ctx, name, metav1.DeleteOptions{}); err != nil &&
+					!apierrors.IsNotFound(err) {
+					return fmt.Errorf("failed to delete network policy %s/%s: %w", namespace, name, err)
+				}
 				return reconcileCiliumNetworkPolicy(
 					ctx,
 					ciliumNetworkPolicyInterface,
@@ -375,18 +376,17 @@ func reconcileNetworkPolicy(
 					ingressPolicyTargets,
 					egressPolicyTargets,
 				)
-			} else {
-				return reconcileKubernetesNetworkPolicy(
-					ctx,
-					networkPolicyInterface,
-					name,
-					namespace,
-					ownerReference,
-					labels,
-					ingressPolicyTargets,
-					egressPolicyTargets,
-				)
 			}
+			return reconcileKubernetesNetworkPolicy(
+				ctx,
+				networkPolicyInterface,
+				name,
+				namespace,
+				ownerReference,
+				labels,
+				ingressPolicyTargets,
+				egressPolicyTargets,
+			)
 		},
 	)
 }
