@@ -65,7 +65,7 @@ func NewCertificateReconciler(
 		rootCACertificateDuration:  rootCACertificateDuration,
 		caCertificateDuration:      caCertificateDuration,
 		certificateDuration:        certificateDuration,
-		certificateRenewBefore:     int32(50),
+		certificateRenewBefore:     int32(90),
 		konnectivityServerAudience: konnectivityServerAudience,
 		tracer:                     tracing.GetTracer("certificates"),
 	}
