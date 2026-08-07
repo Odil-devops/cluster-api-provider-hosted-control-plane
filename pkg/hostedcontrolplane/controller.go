@@ -103,7 +103,7 @@ func NewHostedControlPlaneReconciler(
 		controllerComponent:            "hosted-control-plane-controller",
 		reconcileFilter:                reconcileFilter,
 		caCertificatesDuration:         10 * 365 * 24 * time.Hour,
-		certificatesDuration:           365 * 24 * time.Hour,
+		certificatesDuration:           10 * 365 * 24 * time.Hour,
 		apiServerComponentLabel:        "api-server",
 		apiServerServicePort:           int32(443),
 		etcdComponentLabel:             "etcd",
