@@ -98,12 +98,12 @@ func (c *CertificatesSpec) RootCACertificateDurationOrDefault() time.Duration {
 	if c.RootCACertificateDuration != nil {
 		return c.RootCACertificateDuration.Duration
 	}
-	return 2 * 24 * time.Hour
+	return 10 * 365 * 24 * time.Hour
 }
 
 func (c *CertificatesSpec) CACertificateDurationOrDefault() time.Duration {
 	if c.CACertificateDuration != nil {
 		return c.CACertificateDuration.Duration
 	}
-	return 2 * 24 * time.Hour
+	return 10 * 365 * 24 * time.Hour
 }
